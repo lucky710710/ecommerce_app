@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <h1 class="main-heading">Electro Buy</h1>
+        <div class="nav-buttons">
+            <a href="/" class="btn home-btn">Home</a>
+            <a href="/cart" class="btn cart-btn">Cart (<span id="cart-count">{{ session.get('cart', {})|length }}</span>)</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Your Shopping Cart</h1>
+        {% if cart_items %}
+        <table class="cart-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Image</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr data-product-id="{{ item.product.id }}">
+                    <td>{{ item.product.name }}</td>
+                    <td>
+                        <img src="{{ url_for('static', filename='images/' + item.product.name.replace(' ', '_') + '.jpg') }}" 
+                             alt="{{ item.product.name }}" 
+                             class="product-image"
+                             onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}';">
+                    </td>
+                    <td>${{ item.product.price }}</td>
+                    <td class="quantity">{{ item.quantity }}</td>
+                    <td class="subtotal">${{ item.subtotal }}</td>
+                    <td>
+                        <button class="btn btn-success update-cart" data-action="add" data-product-id="{{ item.product.id }}">+</button>
+
+                        <button class="btn btn-warning update-cart" data-action="reduce" data-product-id="{{ item.product.id }}">-</button>
+
+                        <button class="btn btn-danger remove-item" data-product-id="{{ item.product.id }}">Remove</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h3>Total: $<span id="total">{{ total }}</span></h3>
+        <div class="cart-actions">
+            <a href="/checkout" class="btn btn-primary">Proceed to Checkout</a>
+            <a href="/products" class="btn btn-secondary">Continue Shopping</a>
+        </div>
+        {% else %}
+        <p class="empty-cart-message">No items in the cart. <a href="/products">Shop items to proceed</a>.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cartCount = document.getElementById('cart-count');
+            const totalElement = document.getElementById('total');
+            const tableBody = document.querySelector('.cart-table tbody');
+            const emptyMessage = `<p class="empty-cart-message">No items in the cart. <a href="/products">Shop items to proceed</a>.</p>`;
+
+            document.querySelectorAll('.update-cart').forEach(button => {
+                button.addEventListener('click', () => {
+                    const productId = button.dataset.productId;
+                    const action = button.dataset.action;
+
+                    fetch(`/${action === 'add' ? 'add_to_cart' : 'reduce_quantity'}/${productId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+                        if (row) {
+                            if (data.updated_quantity !== undefined) {
+
+                                const quantityCell = row.querySelector('.quantity');
+                                const subtotalCell = row.querySelector('.subtotal');
+                                quantityCell.textContent = data.updated_quantity;
+                                subtotalCell.textContent = `$${data.updated_subtotal}`;
+
+                                if (data.updated_quantity === 0) {
+                                    row.remove();
+                                }
+                            }
+                        }
+
+                        if (totalElement) totalElement.textContent = data.total.toFixed(2);
+                        if (cartCount) cartCount.textContent = data.total_items;
+
+                        if (data.total_items === 0) {
+                            document.querySelector('.container').innerHTML = emptyMessage;
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            });
+
+            document.querySelectorAll('.remove-item').forEach(button => {
+                button.addEventListener('click', () => {
+                    const productId = button.dataset.productId;
+
+                    fetch(`/remove_from_cart/${productId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+                        if (row) row.remove();
+
+                        if (totalElement) totalElement.textContent = data.total.toFixed(2);
+                        if (cartCount) cartCount.textContent = data.total_items;
+
+                        if (data.total_items === 0) {
+                            document.querySelector('.container').innerHTML = emptyMessage;
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            });
+        });
+    </script>
+</body>
+</html>

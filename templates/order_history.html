@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1 class="main-heading">Electro Buy</h1>
+        <div class="nav-buttons">
+            <a href="/" class="btn home-btn">Home</a>
+            <a href="/cart" class="btn cart-btn">Cart (<span id="cart-count">{{ session.get('cart', {})|length }}</span>)</a>
+        </div>
+    </nav>    
+
+    <div class="container">
+        <h1>Order History</h1>
+        {% if orders %}
+        <ul class="order-list">
+            {% for order in orders %}
+            <li class="order-item">
+                <h3>Order #{{ order.id }} - {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</h3>
+                <p><strong>Customer:</strong> {{ order.customer_name }} ({{ order.customer_email }})</p>
+                <h4>Items:</h4>
+                <ul>
+                    {% for item in order.items %}
+                    <li>{{ item.product.name }} - Quantity: {{ item.quantity }} - Subtotal: ${{ item.subtotal }}</li>
+                    {% endfor %}
+                </ul>
+                <hr>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No orders found.</p>
+        <a href="/products" class="btn">Shop Now</a>
+        {% endif %}
+    </div>
+</body>
+</html>
