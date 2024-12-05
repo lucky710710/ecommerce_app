@@ -90,7 +90,6 @@ def remove_from_cart(product_id):
 
 @app.route('/checkout', methods=['GET', 'POST'])
 def checkout():
-    """Checkout page to place an order."""
     cart = session.get('cart', {})
     if not cart:
         flash("Your cart is empty.")
